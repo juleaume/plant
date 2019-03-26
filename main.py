@@ -19,14 +19,13 @@ class Leg:
     
     def goToXYZ(self,x,y,z):
         r = math.sqrt(x**2+y**2)
-        rp = math.sqrt(r**2+z**2)
         theta0=math.atan2(y,x)
         
-        c2 = (rp**2-self.l1**2-self.l2**2)/(2*self.l1*self.l2)
+        c2 = -(r**2+z**2-self.l1**2-self.l2**2)/(2*self.l1*self.l2)
         theta2 = self.cos2atan2(c2)
-        
-        theta1p = self.cos2atan2(r/rp)
-        theta1s = self.cos2atan2((self.l1**2+rp**2-self.l2**2)/(2*self.l1*rp))
+
+        theta1p = math.atan2(z,r)
+        theta1s = math.atan2(self.l2*math.sin(theta2),self.l1+self.l2*c2)
         
         theta1 = theta1p+theta1s
         
@@ -47,8 +46,12 @@ def main():
     leg1 = Leg(0, 0, 1, 0, l1, l2)
     pwm = leg1.goToXYZ(x,y,z)
     print(pwm)
-    
-    plt.plot([0,math.cos(pwm[1])*l1,math.sqrt(x**2+y**2)],[0,math.sin(pwm[1])*l1,z])
+    x1=math.cos(pwm[1])*l1
+    x2=math.cos(pwm[1]+pwm[2])*l2
+    y1=math.sin(pwm[1])*l1
+    y2=math.sin(pwm[1]+pwm[2])*l2
+    print(0,0, x1,y1,x2,y2)
+    plt.plot([0,x1,x2],[0,y1,y2])
     
 if __name__ == '__main__':
     main()
