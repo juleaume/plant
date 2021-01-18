@@ -1,12 +1,15 @@
-from math import atan2, degrees
+from math import cos, sqrt, sin, atan2, degrees
 
-from numpy import array, cos, sqrt, sin, matmul, pi
+from numpy import linspace
+
+import matplotlib.pyplot as plt
 
 
 class Leg:
     q_0 = 0
     q_1 = 0
     q_2 = 0
+    last_move = list()
 
     def __init__(self, l_0: float, l_1: float, l_2: float):
         """
@@ -19,7 +22,7 @@ class Leg:
         self.l_1 = l_1
         self.l_2 = l_2
 
-    def go_to_coordinates(self, x: float, y: float, z: float, deg=False):
+    def go_to_coord(self, x: float, y: float, z: float, deg=False):
         self.q_0 = atan2(y, x)
         r_0 = sqrt(x ** 2 + y ** 2)  # projected distance from q0 to end-effector
         r_1 = sqrt(r_0 ** 2 + z ** 2)  # absolute distance from q0 to end-effector
@@ -33,12 +36,18 @@ class Leg:
         else:
             return degrees(self.q_0), degrees(self.q_1), degrees(self.q_2)
 
-    def get_coord(self):
-        # p_0 = array([[0], [0], [0], [1]])
-        # p_1 = matmul(calc_transform(0, self.l_0, self.q_0, 0), p_0)
-        # p_2 = matmul(calc_transform(pi / 2, self.l_1, self.q_1, 0), p_1)
-        # p_3 = matmul(calc_transform(0, self.l_2, self.q_2, 0), p_2)
-        # return p_3
+    def move_to(self, x: float, y: float, z: float, freq: int) -> list:
+        x_0, y_0, z_0 = self.get_coord()
+        positions = list()
+        for dx, dy, dz in zip(
+                linspace(x_0, x, freq),
+                linspace(y_0, y, freq),
+                linspace(z_0, z, freq)):
+            positions.append(self.go_to_coord(dx, dy, dz))
+            self.last_move.append(self.get_coord(True))
+        return positions
+
+    def get_coord(self, give_all=False):
         x_0, y_0, z_0 = 0.0, 0.0, 0.0
         x_1 = x_0 + self.l_0 * cos(self.q_0)
         y_1 = y_0 + self.l_0 * sin(self.q_0)
@@ -49,30 +58,30 @@ class Leg:
         x_3 = x_2 + self.l_2 * cos(self.q_1 + self.q_2) * cos(self.q_0)
         y_3 = y_2 + self.l_2 * cos(self.q_1 + self.q_2) * sin(self.q_0)
         z_3 = z_2 + self.l_2 * sin(self.q_1 + self.q_2)
-        return x_3, y_3, z_3
+        if give_all:
+            return [x_0, x_1, x_2, x_3], [y_0, y_1, y_2, y_3], [z_0, z_1, z_2, z_3]
+        else:
+            return x_3, y_3, z_3
 
-
-def calc_transform(alpha: float, r: float, theta: float, d: float) -> array:
-    """
-    return the DH matrix from n-1 to n joint
-    :param alpha:   the metal rotation
-    :param r:       the metal translation
-    :param theta:   the rotation actuator
-    :param d:       the linear actuator
-    :return: the DH matrix in numpy array
-    """
-    return array(
-        [[cos(theta), -1 * cos(alpha) * sin(theta), sin(alpha) * sin(theta), r * cos(theta)],
-         [sin(theta), cos(alpha) * cos(theta), sin(alpha) * cos(theta), r * sin(theta)],
-         [0, sin(alpha), cos(alpha), d],
-         [0, 0, 0, 1]]
-    )
+    def show(self, movement=False):
+        plt.gca(projection='3d')
+        if movement:
+            for coord in self.last_move:
+                x, y, z = coord
+                plt.plot(x, y, z)
+        else:
+            x, y, z = self.get_coord(give_all=True)
+            plt.plot(x, y, z)  # [x0, x1, x3], [y0, y1, y3], [z0, z1, z3]
+        plt.show()
 
 
 def main():
     leg = Leg(1, 10, 10)
-    print(leg.go_to_coordinates(1 + 10 * sqrt(2), 0, 0, deg=True))
-    print(leg.get_coord())
+    leg.go_to_coord(2, 10, 0, deg=True)
+    leg.move_to(5, 0, 1, 50)
+    leg.move_to(2, -10, 0, 50)
+    leg.move_to(2, 10, 0, 50)
+    leg.show(True)
 
 
 if __name__ == '__main__':
